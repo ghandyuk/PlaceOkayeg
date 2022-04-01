@@ -14,7 +14,6 @@ public class SimpleKeyGenerator : IKeyGenerator
         get
         {
             Interlocked.Increment(ref id);
-            Console.WriteLine(id);
             return id;
         }
     }
