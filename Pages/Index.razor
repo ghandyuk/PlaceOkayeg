@@ -1,0 +1,89 @@
+﻿@page "/"
+
+<PageTitle>Okayeg</PageTitle>
+
+<div style="margin-top: 50px;" class="flex-col justify-content-center align-items-center">
+    <div style="margin-bottom: 14px;">
+        <label>x-offset</label>
+        <input type="number" min="0" value="0"
+            @onchange="EventUtil.AsNonRenderingEventHandler<ChangeEventArgs>(XOffsetChanged)">
+        <label>y-offset</label>
+        <input type="number" min="0" value="0"
+            @onchange="EventUtil.AsNonRenderingEventHandler<ChangeEventArgs>(YOffsetChanged)">
+    </div>
+    @if (!isLoading)
+    {
+        <Place.Components.TileInfo @ref="tileInfoRef"></Place.Components.TileInfo>
+
+        <Place.Components.TileContainer @key="KeyGen.Generate">
+            @for (int i = 0; i < width; i++)
+            {
+                @for (int j = 0; j < height; j++)
+                {
+                    var y = height - 1 - i;
+                    <Place.Components.Tile @key="KeyGen.Generate" X=j Y=y Colour="@pixels[j,i]"
+            OnMouseOver="EventUtil.AsNonRenderingEventHandler<TileHoverEventArgs>(UpdateTileInfo)"
+            OnMouseOut="EventUtil.AsNonRenderingEventHandler<TileHoverEventArgs>(UpdateTileInfo)" />
+                }
+            }
+        </Place.Components.TileContainer>
+
+        <div>
+            <p>
+                Width: @width px
+            </p>
+            <p>
+                Height: @height px
+            </p>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject] public HttpClient HttpClient { get; set; }
+    [Inject] public IKeyGenerator KeyGen { get; set; }
+    private string[,] pixels = null!;
+    private bool isLoading = true;
+    private int width;
+    private int height;
+    private int xOffset;
+    private int yOffset;
+    private Place.Components.TileInfo tileInfoRef;
+
+    private void UpdateTileInfo(TileHoverEventArgs args)
+    {
+        string text;
+        if (args.X == -1) text = "";
+        else text = $"{args.X + xOffset}, {args.Y + yOffset}";
+        tileInfoRef.UpdateText(text);
+    }
+
+    private void XOffsetChanged(ChangeEventArgs args) => xOffset = int.Parse(args.Value.ToString());
+    private void YOffsetChanged(ChangeEventArgs args) => yOffset = int.Parse(args.Value.ToString());
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (pixels == null || pixels.Length == 0)
+        {
+            var bytes = await HttpClient.GetByteArrayAsync("images/Okayeg.png");
+            using (var image = Image.Load<Rgba32>(bytes))
+            {
+                width = image.Width;
+                height = image.Height;
+                pixels = new string[height, width];
+
+                image.ProcessPixelRows(accessor =>
+                {
+                    for (int i = 0; i < accessor.Width; i++)
+                    {
+                        for (int j = 0; j < accessor.Height; j++)
+                        {
+                            pixels[j, i] = $"#{image[j, i].ToHex()}";
+                        }
+                    }
+                });
+            }
+            isLoading = false;
+        }
+    }
+}
