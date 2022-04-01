@@ -58,8 +58,15 @@
         tileInfoRef.UpdateText(text);
     }
 
-    private void XOffsetChanged(ChangeEventArgs args) => xOffset = int.Parse(args.Value.ToString());
-    private void YOffsetChanged(ChangeEventArgs args) => yOffset = int.Parse(args.Value.ToString());
+    private void XOffsetChanged(ChangeEventArgs args)
+    {
+        int.TryParse(args.Value.ToString(), out xOffset);
+    }
+
+    private void YOffsetChanged(ChangeEventArgs args)
+    {
+        int.TryParse(args.Value.ToString(), out yOffset);
+    }
 
     protected override async Task OnInitializedAsync()
     {
