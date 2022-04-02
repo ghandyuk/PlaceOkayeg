@@ -24,12 +24,12 @@
     @if (!isLoading)
     {
         <Place.Components.TileContainer Width=width @key="KeyGen.Generate">
-            @for (int i = 0; i < width; i++)
+            @for (int i = 0; i < height; i++)
             {
-                @for (int j = 0; j < height; j++)
+                @for (int j = 0; j < width; j++)
                 {
-                    var y = j + OffsetY;
-                    var x = i + OffsetX;
+                    var y = i + OffsetY;
+                    var x = j + OffsetX;
                     <Place.Components.Tile @key="KeyGen.Generate" X=x Y=y BackgroundColour="@pixels[j,i].BackgroundColour"
             Colour="@pixels[j,i].Colour" />
                 }

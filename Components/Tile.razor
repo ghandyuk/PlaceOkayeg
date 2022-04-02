@@ -8,11 +8,4 @@
     [Parameter] public int Y { get; set; }
     [Parameter] public string Colour { get; set; }
     [Parameter] public string BackgroundColour { get; set; }
-    private string coords;
-
-    protected override void OnParametersSet()
-    {
-        coords = $"({X}, {Y})";
-        base.OnParametersSet();
-    }
 }
