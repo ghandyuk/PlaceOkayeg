@@ -46,6 +46,10 @@ a, .btn-link {
     flex-direction: column;
 }
 
+.flex-grow {
+    flex-grow: 1;
+}
+
 .content {
     padding-top: 1.1rem;
 }

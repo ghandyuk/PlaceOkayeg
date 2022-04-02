@@ -1,26 +1,9 @@
 /* /Components/Tile.razor.rz.scp.css */
 .tile[b-f9z6mymupl] {
-    width: 14px;
-    height: 14px;
-}
-/* /Components/TileContainer.razor.rz.scp.css */
-.tile-container[b-2deuu278lk] {
-    display: grid;
-    grid-template-columns: repeat(48, 1fr);
-    gap: 1px;
-    border: 10px solid pink;
-}
-/* /Components/TileInfo.razor.rz.scp.css */
-.tile-info[b-yx8nou16un] {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translate(-50%, 0);
-    font-weight: 600;
-    border-radius: 4px;
-    max-width: 420px;
-    width: fit-content;
-    background-color: #181818;
+    width: 1.2rem;
+    height: 1.2rem;
+    font-size: 9px;
+    align-items: center;
 }
 /* /Shared/MainLayout.razor.rz.scp.css */
 .page[b-j1g0507xnj] {
