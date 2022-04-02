@@ -1,6 +1,0 @@
-.tile-container {
-    display: grid;
-    grid-template-columns: repeat(48, 1fr);
-    gap: 1px;
-    border: 10px solid pink;
-}

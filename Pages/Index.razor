@@ -1,96 +1,156 @@
-﻿@page "/"
+﻿@using Microsoft.AspNetCore.WebUtilities
+
+@page "/"
 
 <PageTitle>Okayeg</PageTitle>
 
-<div style="margin-top: 50px;" class="flex-col justify-content-center align-items-center">
-    <div style="margin-bottom: 14px;">
-        <label>x-offset</label>
-        <input type="number" min="0" value="0"
-            @onchange="EventUtil.AsNonRenderingEventHandler<ChangeEventArgs>(XOffsetChanged)">
-        <label>y-offset</label>
-        <input type="number" min="0" value="0"
-            @onchange="EventUtil.AsNonRenderingEventHandler<ChangeEventArgs>(YOffsetChanged)">
+<div style="margin-top: 30px;" class="flex-col justify-content-center align-items-center">
+    <div class="flex-col align-items-center flex-grow" style="margin-bottom: 14px;">
+        <div style="margin-bottom: 14px;">
+            <label>x-offset</label>
+            <input type="number" min="0" value="@OffsetX"
+                @onchange="EventUtil.AsNonRenderingEventHandler<ChangeEventArgs>(OffsetXChanged)">
+            <label>y-offset</label>
+            <input type="number" min="0" value="@OffsetY"
+                @onchange="EventUtil.AsNonRenderingEventHandler<ChangeEventArgs>(OffsetYChanged)">
+        </div>
+        <div class="flex" style="width: 100%;">
+            <input class="flex-grow" type="text" value="@ImageUrl"
+                @onchange="EventUtil.AsNonRenderingEventHandler<ChangeEventArgs>(LoadLinkTextChanged)">
+            <button @onclick="@EventUtil.AsNonRenderingEventHandler(() => LoadImage(ImageUrl))">Load
+                Image</button>
+        </div>
     </div>
     @if (!isLoading)
     {
-        <Place.Components.TileInfo @ref="tileInfoRef"></Place.Components.TileInfo>
-
-        <Place.Components.TileContainer @key="KeyGen.Generate">
+        <Place.Components.TileContainer Width=width @key="KeyGen.Generate">
             @for (int i = 0; i < width; i++)
             {
                 @for (int j = 0; j < height; j++)
                 {
-                    var y = height - 1 - i;
-                    <Place.Components.Tile @key="KeyGen.Generate" X=j Y=y Colour="@pixels[j,i]"
-            OnMouseOver="EventUtil.AsNonRenderingEventHandler<TileHoverEventArgs>(UpdateTileInfo)"
-            OnMouseOut="EventUtil.AsNonRenderingEventHandler<TileHoverEventArgs>(UpdateTileInfo)" />
+                    var y = j + OffsetY;
+                    var x = i + OffsetX;
+                    <Place.Components.Tile @key="KeyGen.Generate" X=x Y=y BackgroundColour="@pixels[j,i].BackgroundColour"
+            Colour="@pixels[j,i].Colour" />
                 }
             }
         </Place.Components.TileContainer>
 
         <div>
-            <p>
-                Width: @width px
-            </p>
-            <p>
-                Height: @height px
-            </p>
+            <p> Width: @width px</p>
+            <p> Height: @height px </p>
+        </div>
+    }
+    else
+    {
+        <div>
+            <p>Provide a URL to load image and set offsets for your image</p>
+            <p>Top left is origin/reference point (0,0) for the offset</p>
+            <p>e.g. try https://i.imgur.com/9zWkwCR.png</p>
         </div>
     }
 </div>
 
 @code {
+    private class ColourBackgroundColour
+    {
+        public string Colour { get; set; }
+        public string BackgroundColour { get; set; }
+    }
+
     [Inject] public HttpClient HttpClient { get; set; }
     [Inject] public IKeyGenerator KeyGen { get; set; }
-    private string[,] pixels = null!;
+    [Inject] public NavigationManager NavManager { get; set; }
+    [Inject] public ILogger<Index> Logger { get; set; }
+    [Parameter] public int OffsetX { get; set; }
+    [Parameter] public int OffsetY { get; set; }
+    [Parameter] public string ImageUrl { get; set; }
+    private ColourBackgroundColour[,] pixels = null!;
     private bool isLoading = true;
     private int width;
     private int height;
-    private int xOffset;
-    private int yOffset;
-    private Place.Components.TileInfo tileInfoRef;
 
-    private void UpdateTileInfo(TileHoverEventArgs args)
+    private void OffsetXChanged(ChangeEventArgs args)
     {
-        string text;
-        if (args.X == -1) text = "";
-        else text = $"{args.X + xOffset}, {args.Y + yOffset}";
-        tileInfoRef.UpdateText(text);
+        if (int.TryParse(args.Value.ToString(), out var offsetX))
+        {
+            OffsetX = offsetX;
+        }
     }
 
-    private void XOffsetChanged(ChangeEventArgs args)
+    private void OffsetYChanged(ChangeEventArgs args)
     {
-        int.TryParse(args.Value.ToString(), out xOffset);
+        if (int.TryParse(args.Value.ToString(), out var offsetY))
+        {
+            OffsetY = offsetY;
+        }
     }
 
-    private void YOffsetChanged(ChangeEventArgs args)
+    private void LoadLinkTextChanged(ChangeEventArgs args) => ImageUrl = args.Value.ToString();
+
+    private async Task LoadImage(string url)
     {
-        int.TryParse(args.Value.ToString(), out yOffset);
+        isLoading = true;
+        try
+        {
+            using (var stream = await HttpClient.GetStreamAsync(url))
+            using (var memoryStream = new MemoryStream())
+            {
+                await stream.CopyToAsync(memoryStream);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+
+                using (var image = Image.Load<Rgba32>(memoryStream, new SixLabors.ImageSharp.Formats.Png.PngDecoder()))
+                {
+                    width = image.Width;
+                    height = image.Height;
+                    pixels = new ColourBackgroundColour[height, width];
+
+                    image.ProcessPixelRows(accessor =>
+                    {
+                        for (int i = 0; i < accessor.Width; i++)
+                        {
+                            for (int j = 0; j < accessor.Height; j++)
+                            {
+                                pixels[j, i] = new ColourBackgroundColour()
+                                {
+                                    BackgroundColour = $"#{image[j, i].ToHex()}",
+                                    Colour = $"#{ColourUtil.CalculateConstrastColour(image[j, i]).ToHex()}",
+                                };
+                            }
+                        }
+                    });
+                }
+            }
+            isLoading = false;
+            StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e.Message);
+        }
     }
 
     protected override async Task OnInitializedAsync()
     {
-        if (pixels == null || pixels.Length == 0)
-        {
-            var bytes = await HttpClient.GetByteArrayAsync("images/Okayeg.png");
-            using (var image = Image.Load<Rgba32>(bytes))
-            {
-                width = image.Width;
-                height = image.Height;
-                pixels = new string[height, width];
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
 
-                image.ProcessPixelRows(accessor =>
-                {
-                    for (int i = 0; i < accessor.Width; i++)
-                    {
-                        for (int j = 0; j < accessor.Height; j++)
-                        {
-                            pixels[j, i] = $"#{image[j, i].ToHex()}";
-                        }
-                    }
-                });
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue(nameof(OffsetX), out var sOffsetX))
+        {
+            OffsetX = int.TryParse(sOffsetX.FirstOrDefault(), out var offsetX) ? offsetX : 0;
+        }
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue(nameof(OffsetY), out var sOffsetY))
+        {
+            OffsetY = int.TryParse(sOffsetY.FirstOrDefault(), out var offsetY) ? offsetY : 0;
+        }
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue(nameof(ImageUrl), out var imageUrl))
+        {
+            if (!string.IsNullOrWhiteSpace(imageUrl))
+            {
+                ImageUrl = imageUrl;
+                await LoadImage(ImageUrl);
             }
-            isLoading = false;
         }
     }
 }
