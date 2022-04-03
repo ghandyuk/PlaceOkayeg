@@ -103,13 +103,13 @@
                 {
                     width = image.Width;
                     height = image.Height;
-                    pixels = new ColourBackgroundColour[height, width];
+                    pixels = new ColourBackgroundColour[width, height];
 
                     image.ProcessPixelRows(accessor =>
                     {
-                        for (int i = 0; i < accessor.Width; i++)
+                        for (int i = 0; i < accessor.Height; i++)
                         {
-                            for (int j = 0; j < accessor.Height; j++)
+                            for (int j = 0; j < accessor.Width; j++)
                             {
                                 pixels[j, i] = new ColourBackgroundColour()
                                 {
